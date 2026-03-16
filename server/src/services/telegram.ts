@@ -156,7 +156,7 @@ export function telegramService(db: Db) {
         ),
         orderBy: desc(telegramConversations.updatedAt),
       });
-      return result ?? null;
+      return result as TelegramConversation | null;
     },
 
     async getConversationByChatId(companyId: string, chatId: string): Promise<TelegramConversation | null> {
@@ -168,7 +168,7 @@ export function telegramService(db: Db) {
         ),
         orderBy: desc(telegramConversations.updatedAt),
       });
-      return result ?? null;
+      return result as TelegramConversation | null;
     },
 
     async createConversation(
@@ -191,7 +191,7 @@ export function telegramService(db: Db) {
           lastMessageBy: agentId ? "agent" : null,
         })
         .returning();
-      return result;
+      return result as TelegramConversation;
     },
 
     async updateConversation(
@@ -207,7 +207,7 @@ export function telegramService(db: Db) {
         })
         .where(eq(telegramConversations.id, conversationId))
         .returning();
-      return result ?? null;
+      return result as TelegramConversation | null;
     },
 
     async closeConversation(conversationId: string): Promise<boolean> {
@@ -231,7 +231,7 @@ export function telegramService(db: Db) {
         ),
         orderBy: desc(telegramConversations.updatedAt),
       });
-      return result;
+      return result as TelegramConversation[];
     },
   };
 }

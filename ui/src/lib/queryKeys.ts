@@ -87,4 +87,7 @@ export const queryKeys = {
     dashboard: (pluginId: string) => ["plugins", pluginId, "dashboard"] as const,
     logs: (pluginId: string) => ["plugins", pluginId, "logs"] as const,
   },
+  telegram: {
+    settings: (companyId: string) => ["telegram", "settings", companyId] as const,
+  },
 };
