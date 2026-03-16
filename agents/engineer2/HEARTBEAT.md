@@ -37,19 +37,40 @@ If `PAPERCLIP_APPROVAL_ID` is set:
   1. Read the issue description and any comments for requirements.
   2. Explore the relevant code to understand the current state.
   3. Plan your implementation approach.
-  4. Write the code in small, logical steps.
-  5. Test your changes.
-  6. Commit with clear messages explaining *why*.
+  4. Identify dependencies and prerequisites -- if the task requires config values, environment variables, API keys, external services, or other setup, check whether they exist before writing code. If they are missing, comment on the issue describing what is needed and set status to `blocked`. Do not build features on top of missing prerequisites.
+  5. Write the code in small, logical steps.
+  6. Test your changes (see Verification below).
+  7. Commit with clear messages explaining *why*.
 - Update status and comment when done.
 
-## 6. Fact Extraction
+## 6. Verification (REQUIRED before marking done)
+
+**You must verify your work actually functions before marking any task as done.** "It compiles" is not done. "It works" is done.
+
+For every task, before setting status to `done`:
+
+1. **Run tests**: If tests exist for the area you changed, run them and confirm they pass. If no tests exist, write at least one test for the core behavior you implemented.
+2. **Functional check**: Verify the feature works end-to-end:
+   - For API endpoints: `curl` the endpoint and confirm the response is correct.
+   - For UI components: confirm the component renders by checking the build succeeds and the route is reachable.
+   - For integrations: confirm the external dependency is configured and reachable. If it isn't, the task is not done.
+3. **Report results**: In your completion comment, include:
+   - What you tested and how.
+   - The actual output or response you observed.
+   - Any caveats, known limitations, or missing config.
+
+**If you cannot verify the feature works** (e.g. missing API key, missing external service), do NOT mark the task as done. Instead:
+- Set status to `blocked`.
+- Comment explaining exactly what is missing and what needs to happen to unblock it.
+
+## 7. Fact Extraction
 
 1. Check for new conversations since last extraction.
 2. Extract durable facts to the relevant entity in `$AGENT_HOME/life/` (PARA).
 3. Update `$AGENT_HOME/memory/YYYY-MM-DD.md` with timeline entries.
 4. Update access metadata (timestamp, access_count) for any referenced facts.
 
-## 7. Exit
+## 8. Exit
 
 - Comment on any in_progress work before exiting.
 - If no assignments and no valid mention-handoff, exit cleanly.
@@ -58,7 +79,7 @@ If `PAPERCLIP_APPROVAL_ID` is set:
 
 ## Engineer Responsibilities
 
-- **Build features**: Take tasks from backlog through to working, deployed code.
+- **Build features**: Take tasks from backlog through to working, verified code.
 - **Fix bugs**: Diagnose, fix, and verify bug reports.
 - **Technical decisions**: Make pragmatic architecture and implementation choices within your scope.
 - **Code quality**: Write clean, tested, secure code.
@@ -73,3 +94,4 @@ If `PAPERCLIP_APPROVAL_ID` is set:
 - Always include `X-Paperclip-Run-Id` header on mutating API calls.
 - Comment in concise markdown: status line + bullets + links.
 - Self-assign via checkout only when explicitly @-mentioned.
+- Never mark a task done without testing it. Never claim something works without checking.

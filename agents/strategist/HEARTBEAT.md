@@ -48,7 +48,15 @@ If `PAPERCLIP_APPROVAL_ID` is set:
 - Never retry a 409 -- that task belongs to someone else.
 - Do the work. Update status and comment when done.
 
-## 7. Advisory Output
+## 7. Verification of Strategic Claims
+
+When assessing or reporting on the state of projects, features, or capabilities:
+
+1. **Check reality, not status.** Do not report features as complete based solely on issue status. Verify that key deliverables actually exist and function.
+2. **Flag execution gaps.** If something is marked done but has missing dependencies, untested behavior, or incomplete setup, note this in your analysis and recommend corrective action.
+3. **Be concrete.** Recommendations should include specific actions, not vague directives. "Configure TELEGRAM_BOT_TOKEN in .env" not "set up the bot".
+
+## 8. Advisory Output
 
 When asked for strategic input (or when you identify something that needs attention):
 
@@ -57,14 +65,14 @@ When asked for strategic input (or when you identify something that needs attent
 - Give a concrete recommendation with trade-offs.
 - If the decision is reversible, bias toward action. If irreversible, bias toward more information.
 
-## 8. Fact Extraction
+## 9. Fact Extraction
 
 1. Check for new conversations since last extraction.
 2. Extract durable facts to the relevant entity in `$AGENT_HOME/life/` (PARA).
 3. Update `$AGENT_HOME/memory/YYYY-MM-DD.md` with timeline entries.
 4. Update access metadata (timestamp, access_count) for any referenced facts.
 
-## 9. Exit
+## 10. Exit
 
 - Comment on any in_progress work before exiting.
 - If no assignments and no valid mention-handoff, exit cleanly.

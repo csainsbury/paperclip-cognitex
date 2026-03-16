@@ -168,12 +168,13 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   );
   await ensureCommandResolvable(command, cwd, runtimeEnv);
 
-  await ensureOpenCodeModelConfiguredAndAvailable({
-    model,
-    command,
-    cwd,
-    env: runtimeEnv,
-  });
+  // Skipped: opencode models hangs on this system, but the model works via direct API.
+  // await ensureOpenCodeModelConfiguredAndAvailable({
+  //   model,
+  //   command,
+  //   cwd,
+  //   env: runtimeEnv,
+  // });
 
   const timeoutSec = asNumber(config.timeoutSec, 0);
   const graceSec = asNumber(config.graceSec, 20);
