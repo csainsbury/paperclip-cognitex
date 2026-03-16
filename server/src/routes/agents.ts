@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { z } from "zod";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import path from "node:path";
 import type { Db } from "@paperclipai/db";
@@ -28,6 +29,8 @@ import {
   issueService,
   logActivity,
   secretService,
+  telegramService,
+  sendTelegramNotification,
 } from "../services/index.js";
 import { conflict, forbidden, notFound, unprocessable } from "../errors.js";
 import { assertBoard, assertCompanyAccess, getActorInfo } from "./authz.js";
@@ -42,6 +45,14 @@ import {
 import { DEFAULT_CURSOR_LOCAL_MODEL } from "@paperclipai/adapter-cursor-local";
 import { DEFAULT_GEMINI_LOCAL_MODEL } from "@paperclipai/adapter-gemini-local";
 import { ensureOpenCodeModelConfiguredAndAvailable } from "@paperclipai/adapter-opencode-local/server";
+
+const telegramAlertSchema = z.object({
+  userId: z.string().min(1),
+  message: z.string().min(1),
+  context: z.string().optional(),
+  issueId: z.string().optional(),
+  issueIdentifier: z.string().optional(),
+});
 
 export function agentRoutes(db: Db) {
   const DEFAULT_INSTRUCTIONS_PATH_KEYS: Record<string, string> = {
@@ -1624,6 +1635,97 @@ export function agentRoutes(db: Db) {
       agentName: agent.name,
       adapterType: agent.adapterType,
     });
+  });
+
+  // Telegram alert endpoint - agents can send messages to users
+  router.post("/agents/:id/telegram/alert", validate(telegramAlertSchema), async (req, res) => {
+    const id = req.params.id as string;
+    const agent = await svc.getById(id);
+    if (!agent) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, agent.companyId);
+
+    // Only the agent itself or CEO can send alerts
+    if (req.actor.type === "agent" && req.actor.agentId !== id) {
+      const actorAgent = req.actor.agentId ? await svc.getById(req.actor.agentId) : null;
+      if (!actorAgent || actorAgent.role !== "ceo") {
+        res.status(403).json({ error: "Only the agent itself or CEO can send Telegram alerts" });
+        return;
+      }
+    }
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      res.status(503).json({ error: "Telegram bot is not configured" });
+      return;
+    }
+
+    const { userId, message, context, issueId, issueIdentifier } = req.body;
+    const telSvc = telegramService(db);
+
+    // Get user's Telegram settings
+    const settings = await telSvc.getActiveSettingsForUser(agent.companyId, userId);
+    if (!settings) {
+      res.status(400).json({ error: "User has no active Telegram settings" });
+      return;
+    }
+
+    // Build message with context
+    let fullMessage = message;
+    if (context) {
+      fullMessage += `\n\n<i>Context: ${context}</i>`;
+    }
+    if (issueIdentifier) {
+      fullMessage += `\n\n<a href="/${agent.companyId}/issues/${issueIdentifier}">View in Paperclip</a>`;
+    } else if (issueId) {
+      fullMessage += `\n\nIssue ID: ${issueId}`;
+    }
+
+    // Send the message
+    const result = await sendTelegramNotification(botToken, {
+      chatId: settings.telegramChatId,
+      text: fullMessage,
+      parseMode: "HTML",
+    });
+
+    if (!result.success) {
+      res.status(500).json({ error: result.error });
+      return;
+    }
+
+    // Check for active conversation
+    const existingConv = await telSvc.getActiveConversation(agent.companyId, userId);
+    if (existingConv) {
+      await telSvc.updateConversation(existingConv.id, { lastMessageBy: "agent" });
+    } else {
+      await telSvc.createConversation(
+        agent.companyId,
+        userId,
+        settings.telegramChatId,
+        id,
+        JSON.stringify({ issueId, issueIdentifier })
+      );
+    }
+
+    // Log activity
+    await logActivity(db, {
+      companyId: agent.companyId,
+      actorType: "agent",
+      actorId: id,
+      action: "telegram.alert_sent",
+      entityType: "user",
+      entityId: userId,
+      details: { 
+        messageLength: message.length,
+        hasContext: !!context,
+        issueId: issueId ?? null,
+        issueIdentifier: issueIdentifier ?? null,
+      },
+    });
+
+    res.json({ success: true });
   });
 
   return router;

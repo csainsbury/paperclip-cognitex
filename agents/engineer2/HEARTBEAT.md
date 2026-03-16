@@ -38,12 +38,30 @@ If `PAPERCLIP_APPROVAL_ID` is set:
   2. Explore the relevant code to understand the current state.
   3. Plan your implementation approach.
   4. Identify dependencies and prerequisites -- if the task requires config values, environment variables, API keys, external services, or other setup, check whether they exist before writing code. If they are missing, comment on the issue describing what is needed and set status to `blocked`. Do not build features on top of missing prerequisites.
-  5. Write the code in small, logical steps.
+  5. Write the code in small, logical steps. Follow the Code Safety rules below.
   6. Test your changes (see Verification below).
   7. Commit with clear messages explaining *why*.
 - Update status and comment when done.
 
-## 6. Verification (REQUIRED before marking done)
+## 6. Code Safety (CRITICAL)
+
+**The dev server uses `tsx watch` which auto-restarts when files change. If you write broken code to a server file, the server crashes and your own process gets killed. Follow these rules to avoid crashing the system:**
+
+1. **Check imports before writing.** Before adding code that uses a module (e.g. `z` from `zod`, types from `drizzle-orm`), read the top of the file to see what's already imported. Add any missing imports in the same edit. A missing import = instant server crash.
+
+2. **Check all references exist.** If your code calls a function, method, or references a table/schema, verify it exists before writing the file. Read the source to confirm.
+
+3. **Schema changes need migrations.** If you create or modify a database schema file:
+   - Add the export to `packages/db/src/schema/index.ts`
+   - Run `pnpm db:generate` to create the migration
+   - Run `pnpm db:migrate` to apply it
+   - The table does not exist until the migration runs. Code that queries a non-existent table will throw runtime errors.
+
+4. **Make all changes to a file in one edit when possible.** Each file save triggers a server restart. Multiple small saves = multiple restarts = higher chance of being killed mid-work.
+
+5. **After writing server code, wait a few seconds then check the server is still running:** `curl -s http://localhost:3100/api/health`. If it returns nothing or errors, read the tmux output to diagnose: your code likely has a syntax or import error.
+
+## 7. Verification (REQUIRED before marking done)
 
 **You must verify your work actually functions before marking any task as done.** "It compiles" is not done. "It works" is done.
 
@@ -63,14 +81,14 @@ For every task, before setting status to `done`:
 - Set status to `blocked`.
 - Comment explaining exactly what is missing and what needs to happen to unblock it.
 
-## 7. Fact Extraction
+## 8. Fact Extraction
 
 1. Check for new conversations since last extraction.
 2. Extract durable facts to the relevant entity in `$AGENT_HOME/life/` (PARA).
 3. Update `$AGENT_HOME/memory/YYYY-MM-DD.md` with timeline entries.
 4. Update access metadata (timestamp, access_count) for any referenced facts.
 
-## 8. Exit
+## 9. Exit
 
 - Comment on any in_progress work before exiting.
 - If no assignments and no valid mention-handoff, exit cleanly.

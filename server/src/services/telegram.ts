@@ -1,6 +1,6 @@
 import type { Db } from "@paperclipai/db";
-import { userTelegramSettings } from "@paperclipai/db";
-import { eq, and } from "drizzle-orm";
+import { userTelegramSettings, telegramConversations } from "@paperclipai/db";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface TelegramSettings {
   id: string;
@@ -11,6 +11,20 @@ export interface TelegramSettings {
   isActive: boolean;
   verificationCode: string | null;
   verifiedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TelegramConversation {
+  id: string;
+  companyId: string;
+  userId: string;
+  agentId: string | null;
+  telegramChatId: string;
+  status: "active" | "paused" | "closed";
+  context: string | null;
+  lastMessageAt: Date | null;
+  lastMessageBy: "user" | "agent" | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,6 +144,94 @@ export function telegramService(db: Db) {
         ),
       });
       return result ?? null;
+    },
+
+    // Conversation management
+    async getActiveConversation(companyId: string, userId: string): Promise<TelegramConversation | null> {
+      const result = await db.query.telegramConversations.findFirst({
+        where: and(
+          eq(telegramConversations.companyId, companyId),
+          eq(telegramConversations.userId, userId),
+          eq(telegramConversations.status, "active"),
+        ),
+        orderBy: desc(telegramConversations.updatedAt),
+      });
+      return result ?? null;
+    },
+
+    async getConversationByChatId(companyId: string, chatId: string): Promise<TelegramConversation | null> {
+      const result = await db.query.telegramConversations.findFirst({
+        where: and(
+          eq(telegramConversations.companyId, companyId),
+          eq(telegramConversations.telegramChatId, chatId),
+          eq(telegramConversations.status, "active"),
+        ),
+        orderBy: desc(telegramConversations.updatedAt),
+      });
+      return result ?? null;
+    },
+
+    async createConversation(
+      companyId: string,
+      userId: string,
+      telegramChatId: string,
+      agentId?: string,
+      context?: string,
+    ): Promise<TelegramConversation> {
+      const [result] = await db
+        .insert(telegramConversations)
+        .values({
+          companyId,
+          userId,
+          telegramChatId,
+          agentId: agentId ?? null,
+          status: "active",
+          context: context ?? null,
+          lastMessageAt: new Date(),
+          lastMessageBy: agentId ? "agent" : null,
+        })
+        .returning();
+      return result;
+    },
+
+    async updateConversation(
+      conversationId: string,
+      updates: { status?: "active" | "paused" | "closed"; context?: string; lastMessageBy?: "user" | "agent" },
+    ): Promise<TelegramConversation | null> {
+      const [result] = await db
+        .update(telegramConversations)
+        .set({
+          ...updates,
+          lastMessageAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(telegramConversations.id, conversationId))
+        .returning();
+      return result ?? null;
+    },
+
+    async closeConversation(conversationId: string): Promise<boolean> {
+      const result = await db
+        .update(telegramConversations)
+        .set({
+          status: "closed",
+          updatedAt: new Date(),
+        })
+        .where(eq(telegramConversations.id, conversationId))
+        .returning();
+      return result.length > 0;
+    },
+
+    async getUserActiveConversations(companyId: string, userId: string): Promise<TelegramConversation[]> {
+      const result = await db.query.telegramConversations.findMany({
+        where: and(
+          eq(telegramConversations.companyId, companyId),
+          eq(telegramConversations.userId, userId),
+          eq(telegramConversations.status, "active"),
+        ),
+        orderBy: desc(telegramConversations.updatedAt),
+      });
+      return result;
     },
   };
 }

@@ -292,13 +292,50 @@ export function telegramRoutes(db: Db, botToken?: string) {
         return;
       }
 
-      // Non-command message - could be reply to notification
-      // For now, just acknowledge receipt
-      await sendTelegramNotification(botToken, {
-        chatId,
-        text: "✅ Message received. Use /inbox to see your tasks or /help for commands.",
-        parseMode: "HTML",
-      });
+      // Non-command message - natural language conversation
+      // Check for active conversation
+      const conversation = await svc.getConversationByChatId(companyId, chatId);
+      
+      if (conversation && conversation.status === "active") {
+        // Update conversation with user's message
+        await svc.updateConversation(conversation.id, { 
+          lastMessageBy: "user",
+          context: conversation.context 
+            ? JSON.stringify({
+                ...JSON.parse(conversation.context),
+                lastUserMessage: text,
+              })
+            : JSON.stringify({ lastUserMessage: text }),
+        });
+        
+        // Send acknowledgment that message was forwarded to agent
+        await sendTelegramNotification(botToken, {
+          chatId,
+          text: "📤 Your message has been forwarded to the agent. They will respond when available.",
+          parseMode: "HTML",
+        });
+        
+        // Log the conversation message
+        await logActivity(db, {
+          companyId,
+          actorType: "user",
+          actorId: settings.userId,
+          action: "telegram.conversation.message",
+          entityType: "telegram_conversation",
+          entityId: conversation.id,
+          details: { 
+            agentId: conversation.agentId,
+            messageLength: text.length,
+          },
+        });
+      } else {
+        // No active conversation - inform user how to start one
+        await sendTelegramNotification(botToken, {
+          chatId,
+          text: "💬 <b>Natural Language Chat</b>\n\nTo start a conversation with an agent, visit an issue in Paperclip and click \"Start Telegram Chat\".\n\nYou can also use:\n/inbox - View your assigned items\n/help - Show available commands",
+          parseMode: "HTML",
+        });
+      }
     }
   });
 

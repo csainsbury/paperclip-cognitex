@@ -44,3 +44,4 @@ export { pluginJobs, pluginJobRuns } from "./plugin_jobs.js";
 export { pluginWebhookDeliveries } from "./plugin_webhooks.js";
 export { pluginLogs } from "./plugin_logs.js";
 export { userTelegramSettings } from "./user_telegram_settings.js";
+export { telegramConversations } from "./telegram_conversations.js";

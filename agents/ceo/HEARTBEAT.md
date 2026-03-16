@@ -34,8 +34,27 @@ If `PAPERCLIP_APPROVAL_ID` is set:
 - Always checkout before working: `POST /api/issues/{id}/checkout`.
 - Never retry a 409 -- that task belongs to someone else.
 - Do the work. Update status and comment when done.
+- **If your task involves writing or editing code**, follow the Code Safety rules below.
 
-## 6. Quality Review of Completed Work
+## 6. Code Safety (CRITICAL -- read before editing any source file)
+
+**The dev server uses `tsx watch` which auto-restarts when files change. If you write broken code to a server file, the server crashes and ALL running agent processes get killed.** This has happened before and caused downtime.
+
+1. **Check imports before writing.** Before adding code that uses a module (e.g. `z` from `zod`, types from `drizzle-orm`), read the top of the file to see what's already imported. Add any missing imports in the same edit. A missing import = instant server crash.
+
+2. **Check all references exist.** If your code calls a function, method, or references a table/schema, verify it exists before writing the file. Read the source to confirm.
+
+3. **Schema changes need migrations.** If you create or modify a database schema file:
+   - Add the export to `packages/db/src/schema/index.ts`
+   - Run `pnpm db:generate` to create the migration
+   - Run `pnpm db:migrate` to apply it
+   - The table does not exist until the migration runs.
+
+4. **After writing server code, check the server is still running:** `curl -s http://localhost:3100/api/health`. If it fails, your code broke the server -- fix it immediately.
+
+5. **Prefer delegating code tasks to engineers.** Your primary role is coordination, not implementation. If a task requires significant code changes, assign it to an engineer rather than doing it yourself.
+
+## 7. Quality Review of Completed Work
 
 When reporting on work completed by other agents, or when asked about the state of a feature:
 
@@ -46,21 +65,21 @@ When reporting on work completed by other agents, or when asked about the state 
 2. **Report honestly.** If something is incomplete, partially working, or blocked by missing config, say so. Do not write setup instructions for features that aren't set up.
 3. **Flag gaps.** If an agent marked something done but it doesn't actually work, reopen the issue or create a follow-up.
 
-## 7. Delegation
+## 8. Delegation
 
 - Create subtasks with `POST /api/companies/{companyId}/issues`. Always set `parentId` and `goalId`.
 - Use `paperclip-create-agent` skill when hiring new agents.
 - When hiring a new agent, ensure the agent instructions directory is created on disk with all required files (AGENTS.md, HEARTBEAT.md, SOUL.md, TOOLS.md, memory/). The agent will fail on every run if these files don't exist.
 - Assign work to the right agent for the job.
 
-## 8. Fact Extraction
+## 9. Fact Extraction
 
 1. Check for new conversations since last extraction.
 2. Extract durable facts to the relevant entity in `$AGENT_HOME/life/` (PARA).
 3. Update `$AGENT_HOME/memory/YYYY-MM-DD.md` with timeline entries.
 4. Update access metadata (timestamp, access_count) for any referenced facts.
 
-## 9. Exit
+## 10. Exit
 
 - Comment on any in_progress work before exiting.
 - If no assignments and no valid mention-handoff, exit cleanly.
