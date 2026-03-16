@@ -5,6 +5,7 @@ import { notFound, unprocessable } from "../errors.js";
 import { redactCurrentUserText } from "../log-redaction.js";
 import { agentService } from "./agents.js";
 import { notifyHireApproved } from "./hire-hook.js";
+import { scaffoldAgentDirectory, getInstructionsFilePath } from "./agent-scaffold.js";
 
 function redactApprovalComment<T extends { body: string }>(comment: T): T {
   return {
@@ -111,6 +112,23 @@ export function approvalService(db: Db) {
         if (payloadAgentId) {
           await agentsSvc.activatePendingApproval(payloadAgentId);
           hireApprovedAgentId = payloadAgentId;
+
+          // Scaffold agent directory for approved agent
+          const agent = await agentsSvc.getById(payloadAgentId);
+          if (agent) {
+            const instructionsPath = getInstructionsFilePath(
+              agent.adapterConfig as Record<string, unknown>,
+              agent.adapterType,
+            );
+            if (instructionsPath) {
+              scaffoldAgentDirectory({
+                agentName: agent.name,
+                role: agent.role,
+                title: agent.title,
+                instructionsFilePath: instructionsPath,
+              });
+            }
+          }
         } else {
           const created = await agentsSvc.create(updated.companyId, {
             name: String(payload.name ?? "New Agent"),
@@ -135,6 +153,22 @@ export function approvalService(db: Db) {
             lastHeartbeatAt: null,
           });
           hireApprovedAgentId = created?.id ?? null;
+
+          // Scaffold agent directory for newly created agent
+          if (created) {
+            const instructionsPath = getInstructionsFilePath(
+              created.adapterConfig as Record<string, unknown>,
+              created.adapterType,
+            );
+            if (instructionsPath) {
+              scaffoldAgentDirectory({
+                agentName: created.name,
+                role: created.role,
+                title: created.title,
+                instructionsFilePath: instructionsPath,
+              });
+            }
+          }
         }
         if (hireApprovedAgentId) {
           void notifyHireApproved(db, {

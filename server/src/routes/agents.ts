@@ -31,6 +31,8 @@ import {
   secretService,
   telegramService,
   sendTelegramNotification,
+  scaffoldAgentDirectory,
+  getInstructionsFilePath,
 } from "../services/index.js";
 import { conflict, forbidden, notFound, unprocessable } from "../errors.js";
 import { assertBoard, assertCompanyAccess, getActorInfo } from "./authz.js";
@@ -814,6 +816,19 @@ export function agentRoutes(db: Db) {
       lastHeartbeatAt: null,
     });
 
+    // Scaffold agent directory immediately if no approval required
+    if (!requiresApproval) {
+      const instructionsPath = getInstructionsFilePath(agent.adapterConfig, agent.adapterType);
+      if (instructionsPath) {
+        scaffoldAgentDirectory({
+          agentName: agent.name,
+          role: agent.role,
+          title: agent.title,
+          instructionsFilePath: instructionsPath,
+        });
+      }
+    }
+
     let approval: Awaited<ReturnType<typeof approvalsSvc.getById>> | null = null;
     const actor = getActorInfo(req);
 
@@ -938,6 +953,17 @@ export function agentRoutes(db: Db) {
       spentMonthlyCents: 0,
       lastHeartbeatAt: null,
     });
+
+    // Scaffold agent directory on disk
+    const instructionsPath = getInstructionsFilePath(agent.adapterConfig, agent.adapterType);
+    if (instructionsPath) {
+      scaffoldAgentDirectory({
+        agentName: agent.name,
+        role: agent.role,
+        title: agent.title,
+        instructionsFilePath: instructionsPath,
+      });
+    }
 
     const actor = getActorInfo(req);
     await logActivity(db, {
