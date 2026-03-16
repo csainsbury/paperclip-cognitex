@@ -27,6 +27,7 @@ import { assetRoutes } from "./routes/assets.js";
 import { accessRoutes } from "./routes/access.js";
 import { telegramRoutes } from "./routes/telegram.js";
 import { chatRoutes } from "./routes/chat.js";
+import { versionRoutes } from "./routes/version.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
 import { applyUiBranding } from "./ui-branding.js";
@@ -130,6 +131,7 @@ export async function createApp(
     }),
   );
   api.use("/ping", pingRoutes());
+  api.use("/version", versionRoutes());
   api.use("/companies", companyRoutes(db));
   api.use(agentRoutes(db));
   api.use(assetRoutes(db, opts.storageService));
