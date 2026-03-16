@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "build": {
+      "permissions": [
+        { "permission": "external_directory", "pattern": "/home/chris/.paperclip/*", "action": "allow" },
+        { "permission": "external_directory", "pattern": "/home/chris/companies/*", "action": "allow" }
+      ]
+    },
+    "general": {
+      "permissions": [
+        { "permission": "external_directory", "pattern": "/home/chris/.paperclip/*", "action": "allow" },
+        { "permission": "external_directory", "pattern": "/home/chris/companies/*", "action": "allow" }
+      ]
+    },
+    "explore": {
+      "permissions": [
+        { "permission": "external_directory", "pattern": "/home/chris/.paperclip/*", "action": "allow" },
+        { "permission": "external_directory", "pattern": "/home/chris/companies/*", "action": "allow" }
+      ]
+    }
+  }
+}

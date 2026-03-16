@@ -19,6 +19,7 @@ import { CommentThread } from "../components/CommentThread";
 import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
 import { IssueProperties } from "../components/IssueProperties";
 import { LiveRunWidget } from "../components/LiveRunWidget";
+import { IssueChat } from "../components/IssueChat";
 import type { MentionOption } from "../components/MarkdownEditor";
 import { ScrollToBottom } from "../components/ScrollToBottom";
 import { StatusIcon } from "../components/StatusIcon";
@@ -42,6 +43,7 @@ import {
   Hexagon,
   ListTree,
   MessageSquare,
+  MessageCircle,
   MoreHorizontal,
   Paperclip,
   SlidersHorizontal,
@@ -941,6 +943,10 @@ export function IssueDetail() {
             <MessageSquare className="h-3.5 w-3.5" />
             Comments
           </TabsTrigger>
+          <TabsTrigger value="chat" className="gap-1.5">
+            <MessageCircle className="h-3.5 w-3.5" />
+            Chat
+          </TabsTrigger>
           <TabsTrigger value="subissues" className="gap-1.5">
             <ListTree className="h-3.5 w-3.5" />
             Sub-issues
@@ -984,6 +990,18 @@ export function IssueDetail() {
               await uploadAttachment.mutateAsync(file);
             }}
             liveRunSlot={<LiveRunWidget issueId={issueId!} companyId={issue.companyId} />}
+          />
+        </TabsContent>
+
+        <TabsContent value="chat">
+          <IssueChat
+            comments={commentsWithRunMeta}
+            companyId={issue.companyId}
+            agentMap={agentMap}
+            onSend={async (body) => {
+              await addComment.mutateAsync({ body, reopen: false });
+            }}
+            disabled={addComment.isPending}
           />
         </TabsContent>
 

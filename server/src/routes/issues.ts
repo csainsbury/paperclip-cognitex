@@ -30,10 +30,11 @@ import { forbidden, HttpError, unauthorized } from "../errors.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
+import { sendInboxNotification } from "./telegram.js";
 
 const MAX_ISSUE_COMMENT_LIMIT = 500;
 
-export function issueRoutes(db: Db, storage: StorageService) {
+export function issueRoutes(db: Db, storage: StorageService, telegramBotToken?: string) {
   const router = Router();
   const svc = issueService(db);
   const access = accessService(db);
@@ -678,6 +679,17 @@ export function issueRoutes(db: Db, storage: StorageService) {
         .catch((err) => logger.warn({ err, issueId: issue.id }, "failed to wake assignee on issue create"));
     }
 
+    // Send Telegram notification for user assignments
+    if (issue.assigneeUserId && issue.status !== "backlog" && telegramBotToken) {
+      void sendInboxNotification(db, telegramBotToken, companyId, issue.assigneeUserId!, {
+        id: issue.id,
+        identifier: issue.identifier ?? `Issue #${issue.issueNumber ?? issue.id.slice(0, 8)}`,
+        title: issue.title,
+        status: issue.status,
+        priority: issue.priority,
+      }).catch((err) => logger.warn({ err, issueId: issue.id }, "failed to send Telegram notification on issue create"));
+    }
+
     res.status(201).json(issue);
   });
 
@@ -867,6 +879,17 @@ export function issueRoutes(db: Db, storage: StorageService) {
         heartbeat
           .wakeup(agentId, wakeup)
           .catch((err) => logger.warn({ err, issueId: issue.id, agentId }, "failed to wake agent on issue update"));
+      }
+
+      // Send Telegram notification for user assignments
+      if (assigneeChanged && issue.assigneeUserId && issue.status !== "backlog" && telegramBotToken) {
+        void sendInboxNotification(db, telegramBotToken, existing.companyId, issue.assigneeUserId, {
+          id: issue.id,
+          identifier: issue.identifier ?? `Issue #${issue.issueNumber ?? issue.id.slice(0, 8)}`,
+          title: issue.title,
+          status: issue.status,
+          priority: issue.priority,
+        }).catch((err) => logger.warn({ err, issueId: issue.id }, "failed to send Telegram notification on issue update"));
       }
     })();
 

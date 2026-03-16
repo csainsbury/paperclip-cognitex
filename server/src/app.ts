@@ -24,6 +24,8 @@ import { sidebarBadgeRoutes } from "./routes/sidebar-badges.js";
 import { llmRoutes } from "./routes/llms.js";
 import { assetRoutes } from "./routes/assets.js";
 import { accessRoutes } from "./routes/access.js";
+import { telegramRoutes } from "./routes/telegram.js";
+import { chatRoutes } from "./routes/chat.js";
 import { pluginRoutes } from "./routes/plugins.js";
 import { pluginUiStaticRoutes } from "./routes/plugin-ui-static.js";
 import { applyUiBranding } from "./ui-branding.js";
@@ -130,7 +132,7 @@ export async function createApp(
   api.use(agentRoutes(db));
   api.use(assetRoutes(db, opts.storageService));
   api.use(projectRoutes(db));
-  api.use(issueRoutes(db, opts.storageService));
+  api.use(issueRoutes(db, opts.storageService, process.env.TELEGRAM_BOT_TOKEN));
   api.use(goalRoutes(db));
   api.use(approvalRoutes(db));
   api.use(secretRoutes(db));
@@ -209,7 +211,14 @@ export async function createApp(
       allowedHostnames: opts.allowedHostnames,
     }),
   );
+  api.use(
+    telegramRoutes(db, process.env.TELEGRAM_BOT_TOKEN),
+  );
+  api.use(chatRoutes(db));
   app.use("/api", api);
+  
+  // Serve standalone chat interface
+  app.use("/chat", express.static(path.resolve(process.cwd(), "chat")));
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "API route not found" });
   });

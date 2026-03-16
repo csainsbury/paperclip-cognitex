@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paperclip Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4444;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #44ff44;
+        }
+
+        .status-dot.connecting {
+            background: #ffaa00;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #0066cc;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.agent {
+            align-self: flex-start;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.system {
+            align-self: center;
+            background: #1a1a1a;
+            color: #666;
+            font-size: 12px;
+            padding: 8px 12px;
+            border: 1px solid #333;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .input-container {
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-input {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            min-height: 48px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        .message-input:focus {
+            border-color: #0066cc;
+        }
+
+        .send-btn {
+            background: #0066cc;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-btn:hover {
+            background: #0055aa;
+        }
+
+        .send-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .empty-state h3 {
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            background: #2a2a2a;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #888;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Paperclip Chat</h1>
+        <div class="status">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="empty-state">
+            <h3>Welcome to Paperclip Chat</h3>
+            <p>Connect to start messaging with your team</p>
+        </div>
+    </div>
+
+    <div class="input-container">
+        <textarea 
+            class="message-input" 
+            id="message-input" 
+            placeholder="Type a message..."
+            rows="1"
+        ></textarea>
+        <button class="send-btn" id="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22,2 15,22 11,13 2,9"></polygon>
+            </svg>
+            Send
+        </button>
+    </div>
+
+    <script>
+        // Chat application state
+        const state = {
+            connected: false,
+            connecting: false,
+            messages: [],
+            ws: null,
+            apiUrl: '',
+            token: '',
+            companyId: '',
+            userId: ''
+        };
+
+        // DOM elements
+        const container = document.getElementById('chat-container');
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // Initialize from URL parameters
+        function init() {
+            const params = new URLSearchParams(window.location.search);
+            state.apiUrl = params.get('api') || window.location.origin;
+            state.token = params.get('token') || '';
+            state.companyId = params.get('company') || '';
+            state.userId = params.get('user') || '';
+
+            // Try to connect WebSocket
+            connectWebSocket();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Load initial messages
+            loadMessages();
+        }
+
+        // WebSocket connection
+        function connectWebSocket() {
+            if (state.connected || state.connecting) return;
+
+            state.connecting = true;
+            updateStatus('connecting', 'Connecting...');
+
+            const wsUrl = state.apiUrl.replace(/^http/, 'ws') + '/api/live-events';
+            
+            try {
+                state.ws = new WebSocket(wsUrl);
+
+                state.ws.onopen = () => {
+                    state.connected = true;
+                    state.connecting = false;
+                    updateStatus('connected', 'Connected');
+                    
+                    // Authenticate if token available
+                    if (state.token) {
+                        state.ws.send(JSON.stringify({
+                            type: 'auth',
+                            token: state.token
+                        }));
+                    }
+                };
+
+                state.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWebSocketMessage(data);
+                    } catch (e) {
+                        console.error('Failed to parse message:', e);
+                    }
+                };
+
+                state.ws.onclose = () => {
+                    state.connected = false;
+                    state.connecting = false;
+                    updateStatus('disconnected', 'Disconnected');
+                    
+                    // Reconnect after 5 seconds
+                    setTimeout(connectWebSocket, 5000);
+                };
+
+                state.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    state.connecting = false;
+                };
+            } catch (e) {
+                console.error('Failed to connect:', e);
+                state.connecting = false;
+                updateStatus('disconnected', 'Connection failed');
+            }
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            if (data.type === 'message' || data.type === 'comment') {
+                addMessage({
+                    id: data.id || Date.now(),
+                    text: data.text || data.body,
+                    author: data.author || 'System',
+                    authorType: data.authorType || 'system',
+                    timestamp: new Date(data.timestamp || Date.now())
+                });
+            }
+        }
+
+        // Update connection status
+        function updateStatus(status, text) {
+            statusDot.className = 'status-dot' + (status === 'connected' ? ' connected' : status === 'connecting' ? ' connecting' : '');
+            statusText.textContent = text;
+            sendBtn.disabled = !state.connected;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            sendBtn.addEventListener('click', sendMessage);
+            
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            input.addEventListener('input', () => {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            });
+        }
+
+        // Send message
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add to UI immediately
+            addMessage({
+                id: Date.now(),
+                text: text,
+                author: 'You',
+                authorType: 'user',
+                timestamp: new Date(),
+                pending: true
+            });
+
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Send via WebSocket if connected
+            if (state.connected && state.ws) {
+                state.ws.send(JSON.stringify({
+                    type: 'message',
+                    text: text,
+                    timestamp: Date.now()
+                }));
+            }
+
+            // Also POST to API
+            try {
+                const response = await fetch(`${state.apiUrl}/api/chat/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        companyId: state.companyId
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to send message:', await response.text());
+                }
+            } catch (e) {
+                console.error('Send error:', e);
+            }
+        }
+
+        // Add message to UI
+        function addMessage(msg) {
+            // Remove empty state if present
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Create message element
+            const el = document.createElement('div');
+            el.className = `message ${msg.authorType}`;
+            el.innerHTML = `
+                ${escapeHtml(msg.text)}
+                <div class="message-meta">
+                    ${escapeHtml(msg.author)} · ${formatTime(msg.timestamp)}
+                </div>
+            `;
+
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Load initial messages
+        async function loadMessages() {
+            try {
+                const response = await fetch(`${state.apiUrl}/api/chat/messages?companyId=${state.companyId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const messages = await response.json();
+                    messages.forEach(addMessage);
+                }
+            } catch (e) {
+                console.error('Failed to load messages:', e);
+            }
+        }
+
+        // Utility: Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Utility: Format time
+        function formatTime(date) {
+            const d = new Date(date);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
+</content>
