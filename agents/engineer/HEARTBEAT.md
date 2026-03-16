@@ -43,11 +43,11 @@ If `PAPERCLIP_APPROVAL_ID` is set:
   7. Commit with clear messages explaining *why*.
 - Update status and comment when done.
 
-## 6. Code Safety (CRITICAL)
+## 6. Code Safety
 
-**The dev server uses `tsx watch` which auto-restarts when files change. If you write broken code to a server file, the server crashes and your own process gets killed. Follow these rules to avoid crashing the system:**
+You run in an **isolated git worktree**, so your edits do NOT affect the running dev server. However, you should still write correct code:
 
-1. **Check imports before writing.** Before adding code that uses a module (e.g. `z` from `zod`, types from `drizzle-orm`), read the top of the file to see what's already imported. Add any missing imports in the same edit. A missing import = instant server crash.
+1. **Check imports before writing.** Before adding code that uses a module, read the top of the file to see what's already imported. Add any missing imports in the same edit.
 
 2. **Check all references exist.** If your code calls a function, method, or references a table/schema, verify it exists before writing the file. Read the source to confirm.
 
@@ -55,11 +55,9 @@ If `PAPERCLIP_APPROVAL_ID` is set:
    - Add the export to `packages/db/src/schema/index.ts`
    - Run `pnpm db:generate` to create the migration
    - Run `pnpm db:migrate` to apply it
-   - The table does not exist until the migration runs. Code that queries a non-existent table will throw runtime errors.
+   - The table does not exist until the migration runs.
 
-4. **Make all changes to a file in one edit when possible.** Each file save triggers a server restart. Multiple small saves = multiple restarts = higher chance of being killed mid-work.
-
-5. **After writing server code, wait a few seconds then check the server is still running:** `curl -s http://localhost:3100/api/health`. If it returns nothing or errors, read the tmux output to diagnose: your code likely has a syntax or import error.
+4. **Test against the main server.** The main dev server at `http://localhost:3100` runs from the main working tree. Use it for API testing: `curl -s http://localhost:3100/api/health`.
 
 ## 7. Verification (REQUIRED before marking done)
 
@@ -90,7 +88,8 @@ For every task, before setting status to `done`:
 
 ## 9. Exit
 
-- Comment on any in_progress work before exiting.
+- **Commit and push your branch** if you made any changes: `git add -A && git commit -m "..." && git push -u origin HEAD`.
+- Comment on any in_progress work before exiting, including your branch name.
 - If no assignments and no valid mention-handoff, exit cleanly.
 
 ---

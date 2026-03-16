@@ -36,23 +36,13 @@ If `PAPERCLIP_APPROVAL_ID` is set:
 - Do the work. Update status and comment when done.
 - **If your task involves writing or editing code**, follow the Code Safety rules below.
 
-## 6. Code Safety (CRITICAL -- read before editing any source file)
+## 6. Code Safety
 
-**The dev server uses `tsx watch` which auto-restarts when files change. If you write broken code to a server file, the server crashes and ALL running agent processes get killed.** This has happened before and caused downtime.
+**Do NOT edit server source files directly.** Your role is coordination, not implementation. Delegate all code changes to engineers.
 
-1. **Check imports before writing.** Before adding code that uses a module (e.g. `z` from `zod`, types from `drizzle-orm`), read the top of the file to see what's already imported. Add any missing imports in the same edit. A missing import = instant server crash.
-
-2. **Check all references exist.** If your code calls a function, method, or references a table/schema, verify it exists before writing the file. Read the source to confirm.
-
-3. **Schema changes need migrations.** If you create or modify a database schema file:
-   - Add the export to `packages/db/src/schema/index.ts`
-   - Run `pnpm db:generate` to create the migration
-   - Run `pnpm db:migrate` to apply it
-   - The table does not exist until the migration runs.
-
-4. **After writing server code, check the server is still running:** `curl -s http://localhost:3100/api/health`. If it fails, your code broke the server -- fix it immediately.
-
-5. **Prefer delegating code tasks to engineers.** Your primary role is coordination, not implementation. If a task requires significant code changes, assign it to an engineer rather than doing it yourself.
+If you absolutely must make a minor config or documentation edit:
+- Verify the server is still running after: `curl -s http://localhost:3100/api/health`
+- If it fails, report the issue and escalate.
 
 ## 7. Quality Review of Completed Work
 
