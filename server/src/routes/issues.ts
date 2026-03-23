@@ -647,8 +647,10 @@ export function issueRoutes(db: Db, storage: StorageService, telegramBotToken?: 
     }
 
     const actor = getActorInfo(req);
+    const { dueDate: dueDateRaw, ...createFields } = req.body;
     const issue = await svc.create(companyId, {
-      ...req.body,
+      ...createFields,
+      ...(dueDateRaw !== undefined ? { dueDate: dueDateRaw ? new Date(dueDateRaw) : null } : {}),
       createdByAgentId: actor.agentId,
       createdByUserId: actor.actorType === "user" ? actor.actorId : null,
     });
@@ -721,9 +723,12 @@ export function issueRoutes(db: Db, storage: StorageService, telegramBotToken?: 
     }
     if (!(await assertAgentRunCheckoutOwnership(req, res, existing))) return;
 
-    const { comment: commentBody, hiddenAt: hiddenAtRaw, ...updateFields } = req.body;
+    const { comment: commentBody, hiddenAt: hiddenAtRaw, dueDate: dueDateRaw, ...updateFields } = req.body;
     if (hiddenAtRaw !== undefined) {
       updateFields.hiddenAt = hiddenAtRaw ? new Date(hiddenAtRaw) : null;
+    }
+    if (dueDateRaw !== undefined) {
+      updateFields.dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
     }
     let issue;
     try {

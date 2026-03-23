@@ -118,6 +118,7 @@ export interface Issue {
   billingCode: string | null;
   assigneeAdapterOverrides: IssueAssigneeAdapterOverrides | null;
   executionWorkspaceSettings: IssueExecutionWorkspaceSettings | null;
+  dueDate: Date | null;
   startedAt: Date | null;
   completedAt: Date | null;
   cancelledAt: Date | null;

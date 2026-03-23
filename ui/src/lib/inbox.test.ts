@@ -130,6 +130,7 @@ function makeIssue(id: string, isUnreadForMe: boolean): Issue {
     executionRunId: null,
     executionAgentNameKey: null,
     executionLockedAt: null,
+    dueDate: null,
     startedAt: null,
     completedAt: null,
     cancelledAt: null,
